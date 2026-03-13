@@ -23,7 +23,7 @@ interface ChatMessage {
     }
 }
 
-type Message = JoinMessage | ChatMessage
+type Message = JoinMessage | ChatMessage;
 
 let allSockets: User[] = [];
 
@@ -32,6 +32,7 @@ wss.on("connection", (socket) => {
     socket.on("message", (message) => {
         const parsedMessage = JSON.parse(message.toString())
 
+        //JOIN ROOM
         if(parsedMessage.type == "join"){
 
             console.log("user joined room: "+ parsedMessage.payload.roomId)
@@ -43,34 +44,33 @@ wss.on("connection", (socket) => {
             })
         }
 
+        //CHAT MESSAGE
         if(parsedMessage.type === "chat"){
 
-            console.log("user wants to chat")
-            
-            let currentUserRoom = null;
-            for(let i=0; i<allSockets.length; i++){
-                if(allSockets[i]?.socket == socket){
-                    currentUserRoom = allSockets[i]?.room;
-                }
-            }
-
             const sender = allSockets.find(user => user.socket === socket)
+            if(!sender) return;
 
-            for(let i=0; i<allSockets.length; i++){
-                if(allSockets[i]?.room === currentUserRoom){
-                    allSockets[i]?.socket.send(
-                        JSON.stringify({
-                            type: "chat",
-                            payload: {
-                                message: parsedMessage.payload.message,
-                                username: sender?.username
-                            }
-                        })
-                    )
+            const room = sender.room;
+
+            for(const user of allSockets) {
+                if(user.room === room){
+                    user.socket.send(JSON.stringify({
+                        type: "chat",
+                        payload: {
+                            message: parsedMessage.payload.message,
+                            username: sender.username
+                        }
+                    }))
                 }
             }
         }
 
+    })
+
+    socket.on("close", () => {
+        console.log("user disconnected");
+
+        allSockets = allSockets.filter(user => user.socket !== socket)
     })
 
 })

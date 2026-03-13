@@ -11,29 +11,34 @@ function App() {
   const [input, setInput] = useState("");
   const wsRef = useRef<WebSocket | null>(null);
 
-  useEffect(() => {
-    const ws = new WebSocket("ws://localhost:8080");
+  const [username, setUsername] = useState("");
+  const [roomId, setRoomId] = useState("");
+  const [joined, setJoined] = useState(false);
+
+  const joinRoom = () => {
+    const ws = new WebSocket("ws://localhost:8080")
+
     ws.onmessage = (event) => {
       const data = JSON.parse(event.data)
 
       if(data.type === "chat"){
         setMessages((m) => [...m, data.payload])
       }
-    }
+    };
 
     ws.onopen = () => {
       ws.send(JSON.stringify({
         type: "join",
         payload: {
-          roomId: "red",
-          username: "Nirmal"
+          roomId,
+          username
         }
-      }))
-    }
+      }));
+    };
 
     wsRef.current = ws;
-
-  }, []);
+    setJoined(true);
+  }
 
   const sendMessage = () => {
     if(!wsRef.current) return
@@ -46,6 +51,19 @@ function App() {
     }))
 
     setInput("")
+  }
+
+  if(!joined){
+    return (
+      <div className="h-screen flex items-center justify-center bg-black">
+        <div className="bg-gray-900 p-8 rounded-xl flex flex-col gap-4 w-80">
+          <h1 className="text-white text-xl font-bold text-center">Join Chat Room</h1>
+          <input className="p-2 rounded" placeholder="Username" value={username} onChange={(e) => setUsername(e.target.value)} />
+          <input className="p-2 rounded" placeholder="Room ID" value={roomId} onChange={(e) => setRoomId(e.target.value)} />
+          <button onClick={joinRoom} className="bg-blue-600 text-white p-2 rounded">Join</button>
+        </div>
+      </div>
+    )
   }
   
   return (
