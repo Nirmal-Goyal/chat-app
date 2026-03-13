@@ -1,120 +1,79 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+import { useEffect, useRef, useState } from "react"
 
 function App() {
-  const [count, setCount] = useState(0)
 
+  interface ChatMessage {
+    message: string;
+    username: string;
+  }
+
+  const [messages, setMessages] = useState<ChatMessage[]>([])
+  const [input, setInput] = useState("");
+  const wsRef = useRef<WebSocket | null>(null);
+
+  useEffect(() => {
+    const ws = new WebSocket("ws://localhost:8080");
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data)
+
+      if(data.type === "chat"){
+        setMessages((m) => [...m, data.payload])
+      }
+    }
+
+    ws.onopen = () => {
+      ws.send(JSON.stringify({
+        type: "join",
+        payload: {
+          roomId: "red",
+          username: "Nirmal"
+        }
+      }))
+    }
+
+    wsRef.current = ws;
+
+  }, []);
+
+  const sendMessage = () => {
+    if(!wsRef.current) return
+
+    wsRef.current.send(JSON.stringify({
+      type: "chat",
+      payload: {
+        message: input
+      }
+    }))
+
+    setInput("")
+  }
+  
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
+    <div className="h-screen bg-black flex flex-col items-center justify-center">
+      <div className="w-full max-w-3xl h-[90vh] flex flex-col bg-gray-900 rounded-xl overflow-hidden shadow-lg">
+        
+        <div className="flex-1 bg-green-300 p-4 overflow-y-auto">
+          {messages.map((msg, index) => (
+            <div key={index} className="bg-white text-black rounded p-4 m-2">
+              {msg.username}: {msg.message}
+            </div>
+          ))}
         </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
 
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
+        <div className="bg-white flex items-center gap-2 p-2">
+          <input value={input} onChange={(e) => setInput(e.target.value)}
+            type="text"
+            placeholder="Type a message..."
+            className="flex-1 p-3 rounded-md border outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          <button onClick={sendMessage} 
+            className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-3 rounded-md transition">
+            Send
+          </button>
         </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
+      </div>
+    </div>
   )
 }
 
